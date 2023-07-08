@@ -1,0 +1,19 @@
+query UserDraftProposals($id: UUID!) {
+	rawProposals(condition: {status: DRAFT, ownerId: $id}) {
+		nodes {
+			id
+			title
+			budgetAmount
+			prizeAmount
+			fundingRequirement
+			months {
+				budgetAmount
+				description
+			}
+			owner {
+				id
+				name
+			}
+		}
+	}
+}

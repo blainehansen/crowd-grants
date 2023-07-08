@@ -1,0 +1,21 @@
+{
+	"name": "db",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"build": "tsc -p .",
+		"main": "ts-node server/main.ts",
+		"dev": "ts-node-dev --clear server/main.ts"
+	},
+	"dependencies": {
+		"@graphile-contrib/pg-simplify-inflector": "^6.1.0",
+		"postgraphile": "^4.13.0"
+	},
+	"devDependencies": {
+		"@types/node": "^16.18.25",
+		"ts-node": "^10.9.1",
+		"ts-node-dev": "^2.0.0",
+		"typescript": "^4.9.5"
+	}
+}
