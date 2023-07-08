@@ -1,19 +1,23 @@
-query UserDraftProposals($id: UUID!) {
-	rawProposals(condition: {status: DRAFT, ownerId: $id}) {
+query UserDrafts($userId: UUID!) {
+	rawProposals(condition: {status: DRAFT, ownerId: $userId}) {
 		nodes {
 			id
 			title
-			budgetAmount
-			prizeAmount
-			fundingRequirement
-			months {
-				budgetAmount
-				description
-			}
-			owner {
-				id
-				name
-			}
 		}
 	}
+}
+
+query UserDraft($userId: UUID!) {
+	rawProposals(condition: {status: DRAFT, ownerId: $userId}) {
+		nodes {
+			id
+			title
+			prizeAmount
+			months
+		}
+	}
+}
+
+mutation CreateDraft($ownerId: UUID!, $title: String!) {
+	#
 }

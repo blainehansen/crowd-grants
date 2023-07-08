@@ -1,13 +1,13 @@
 <template lang="pug">
 
-h1 {{ person.toLowerCase() }}
+div
+	h1 Crowd Grants!
 	
+	NuxtLink(to="/drafts") see your draft proposals
+
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import api from '@/utils/api'
-
-const person = ref('HELLO')
 
 </script>
