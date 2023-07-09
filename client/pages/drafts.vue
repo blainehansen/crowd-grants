@@ -19,8 +19,7 @@ div
 import { ref } from 'vue'
 import { navigateTo } from 'nuxt'
 import api from '@/utils/api'
-
-const userId = ref("00000000-0000-0000-0000-000000000001")
+import { userId } from '@/composables'
 
 const newDraftTitle = ref('')
 const createDraftErr = ref(null as string | null)
