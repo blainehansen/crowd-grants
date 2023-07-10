@@ -25,13 +25,13 @@ const newDraftTitle = ref('')
 const createDraftErr = ref(null as string | null)
 
 const promise = computed(() => {
-	return api.UserDrafts({ id: userId.value })
+	return api.FetchDrafts({ id: userId.value })
 })
 
 async function createDraft() {
 	if (!newDraftTitle.value)
 	const createResult = await api.CreateDraft({ ownerId: userId.value, title: newDraftTitle.value })
-	if (createResult.is_err()) {
+	if (createResult.isErr()) {
 		createDraftErr.value = createResult.error
 		return
 	}

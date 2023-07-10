@@ -8,28 +8,37 @@ ResultPromise(:promise="draftPromise")
 		input(v-model="draft.title")
 
 		div(v-for="(month, index) in draft.months")
-			input(v-model="month.budgetAmount")
+			input(v-model.number="month.budgetAmount")
 			input(v-model="month.description")
 			button(@click="deleteMonth(draft, index)") delete month
 
 		button(@click="addMonth(draft)") add month
 
-		input(v-model="draft.prizeAmount")
+		input(v-model.number="draft.prizeAmount")
 
-		button(@click="save(draft)") save
+		button(@click="save(draft)", :disabled="!valid") save
 		p(v-if="saveFeedback") {{ saveFeedback }}
-		//- ActionFeedback(:feedback="saveFeedback")
+
+		button(@click="publish(draft)", :disabled="!valid") publish!
+		p(v-if="publishFeedback") {{ publishFeedback }}
 
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import api from '@/utils/api'
-import { handleFeedback, useActionFeedback, Unpromise } from '@/utils'
+import { handleFeedback, Unpromise } from '@/utils'
 import { userId } from '@/composables'
+import { useRoute } from 'nuxt'
+const route = useRoute()
 
-const draftPromise = computed(() => api.UserDraft({ ownerId: userId.value }))
-type Draft = Unpromise<typeof api.UserDraft>
+const draftPromise = computed(() => api.FetchDraft({ draftId: route.params.id, userId: userId.value }))
+type Draft = Unpromise<typeof api.FetchDraft>['project']
+
+const valid = computed(() => {
+	// TODO
+	return true
+})
 
 function addMonth(draft: Draft) {
 	draft.months.push({ budgetAmount: 0, description: '' })
@@ -38,32 +47,21 @@ function deleteMonth(draft: Draft, index: number) {
 	draft.months.splice(index, 1)
 }
 
-const saveFeedback = useActionFeedback()
+const saveFeedback = ref(null as string | null)
 function save(draft: Draft) {
-	handleFeedback(saveFeedback, api.SaveDraft({ ownerId: userId.value, draft }))
+	handleFeedback(
+		saveFeedback, "saving...", "success!", (e) => `oh no! ${e}`
+		api.SaveDraft(draft),
+	)
 }
 
-type Feedback = string | null
-function useActionFeedback() {
-	return ref(null as Feedback)
-}
-
-export function handleFeedback<E>(feedback: Ref<Feedback>, actionPromise: Promise<Result<unknown, E>>) {
-	feedback.value = 'loading...'
-	actionPromise.then(result => {
-		if (result.isOk()) {
-			feedback.value = 'success!'
-			const timeoutId = setTimeout(() => { feedback.value = null }, 2000)
-			onUnmounted(() => clearTimeout(timeoutId))
-		}
-		else if (result.isErr())
-			feedback.value = `oh no! ${result.error}`
-
-	})
-}
-
-export function resultPromise<T>(promise: Promise<T>): Promise<Result<T, E>> {
-	return promise.then(Ok).catch(Err)
+const publishFeedback = ref(null as string | null)
+async function publish(_: Draft) {
+	await handleFeedback(
+		publishFeedback, "publishing...", "success! you'll be redirected soon", (e) => `oh no! ${e}`
+		api.PublishDraft(route.params.id),
+	)
+	return navigateTo(`/proposal/${route.params.id}`)
 }
 
 </script>

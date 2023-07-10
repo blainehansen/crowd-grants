@@ -1,0 +1,95 @@
+query FetchDrafts($userId: UUID!) {
+	projects(condition: {ownerId: $userId, status: DRAFT}) {
+		nodes {
+			id
+			title
+			months {
+				budgetAmount
+				description
+			}
+			prizeAmount
+		}
+	}
+}
+
+query FetchDraft($draftId: UUID!, $userId: UUID!) {
+	project(id: $draftId, ownerId: $userId, status: DRAFT) {
+		id
+		title
+		months {
+			budgetAmount
+			description
+		}
+		prizeAmount
+	}
+}
+
+mutation CreateDraft($input: CreateNewDraftInput!) {
+	createNewDraft(input: $input) {
+		uuid
+	}
+}
+
+mutation SaveDraft($id: UUID!, $title: String!, $months: [ProjectMonthInput]!, $prizeAmount: BigFloat!) {
+	updateProject(
+		input: {id: $id, patch: {prizeAmount: $prizeAmount, title: $title, months: $months}}
+	)
+}
+
+mutation PublishDraft($projectId: UUID!) {
+	publishDraft(input: {projectId: $projectId})
+}
+
+# mutation UnpublishDraft($projectId: UUID!) {
+# 	unpublishProject(input: {projectId: $projectId1})
+# }
+
+
+query FetchProposals {
+	projects(condition: {status: PROPOSAL}) {
+		nodes {
+			id
+			owner {
+				id
+				name
+			}
+			title
+			overallPledgedAmount
+			fundingRequirement
+		}
+	}
+}
+
+
+query FetchProposal($proposalId: UUID!) {
+	project(id: $proposalId, status: PROPOSAL) {
+		id
+		owner {
+			id
+			name
+		}
+		title
+		months {
+			budgetAmount
+			description
+		}
+		budgetAmount
+		fundingRequirement
+		prizeAmount
+		overallPledgedAmount
+		overallPledgerCount
+	}
+}
+
+
+mutation MakePledge($pledgerId: UUID!, $projectId: UUID!, $amount: BigFloat!, ) {
+	makePledge(
+		input: {pledgerId: $pledgerId, projectId: $projectId, amount: $amount}
+	)
+}
+
+mutation CastVote($pledgerId: UUID!, $projectId: UUID!, $shouldContinue: Boolean!) {
+	castVote(
+		input: {argPledgerId: $pledgerId, argProjectId: $projectId, argShouldContinue: $shouldContinue}
+	)
+}

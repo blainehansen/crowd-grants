@@ -16,6 +16,9 @@ const postgraphileService = postgraphile.postgraphile(
 		setofFunctionsContainNulls: false,
 		ignoreRBAC: false,
 		ignoreIndexes: true,
+		graphileBuildOptions: {
+			pgStrictFunctions: true,
+		},
 		showErrorStack: "json",
 		extendedErrors: ["hint", "detail", "errcode"],
 		pgDefaultRole: 'user',
@@ -40,11 +43,11 @@ const postgraphileService = postgraphile.postgraphile(
 				// })
 
 				builder.hook("GraphQLObjectType:fields:field", (field, build, context) => {
-					if (!context.scope.isMutationPayload) {
-						console.log('field:', field)
-						console.log('context.scope:', context.scope)
-						console.log('')
-					}
+					// if (!context.scope.isMutationPayload) {
+					// 	console.log('field:', field)
+					// 	console.log('context.scope:', context.scope)
+					// 	console.log('')
+					// }
 					return context.scope.isPgForwardRelationField
 						? {
 							...field,
