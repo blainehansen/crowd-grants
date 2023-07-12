@@ -1,3 +1,8 @@
+the account page is the thing giving me grief
+
+I should just do something simple, and have a
+
+
 - [X] people can view their drafts (rough)
 - [X] people can create drafts (rough)
 - [X] people can publish proposals (rough)

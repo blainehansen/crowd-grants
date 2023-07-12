@@ -32,7 +32,7 @@ mutation CreateDraft($input: CreateNewDraftInput!) {
 
 mutation SaveDraft($id: UUID!, $title: String!, $months: [ProjectMonthInput]!, $prizeAmount: BigFloat!) {
 	updateProject(
-		input: {id: $id, patch: {prizeAmount: $prizeAmount, title: $title, months: $months}}
+		input: {id: $id, patch: {title: $title, months: $months, prizeAmount: $prizeAmount}}
 	)
 }
 
@@ -41,7 +41,7 @@ mutation PublishDraft($projectId: UUID!) {
 }
 
 # mutation UnpublishDraft($projectId: UUID!) {
-# 	unpublishProject(input: {projectId: $projectId1})
+# 	unpublishProject(input: {projectId: $projectId})
 # }
 
 

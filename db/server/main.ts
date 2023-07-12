@@ -24,6 +24,7 @@ const postgraphileService = postgraphile.postgraphile(
 		pgDefaultRole: 'user',
 		appendPlugins: [
 			require('@graphile-contrib/pg-simplify-inflector'),
+			// require('postgraphile-plugin-nested-mutations'),
 			// require('postgraphile-plugin-connection-filter'),
 			builder => {
 				// builder.hook("GraphQLObjectType:fields:field", (field, build, context) => {
