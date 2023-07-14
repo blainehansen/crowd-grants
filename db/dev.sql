@@ -15,43 +15,27 @@ create table project (
 	owner_id uuid not null references account(id),
 	status project_status_enum not null,
 	title text not null,
+	-- funding_days smallint not null check(funding_days > 0),
 	initial_amount numeric not null check(initial_amount >= 0),
 	monthly_amount numeric not null check(monthly_amount >= 0),
 	month_count smallint not null check(month_count >= 0),
 	prize_amount numeric not null check(prize_amount >= 0)
 );
 
--- create function project_budget_amount(project project) returns numeric as $$
--- 	select project.initial_amount + (project.monthly_amount * project.month_count)
--- $$ language sql stable;
-
-create function project_funding_requirement(p project) returns numeric as $$
-	select p.initial_amount + (p.monthly_amount * p.month_count) + p.prize_amount
+create function project_base_funding_requirement(p project) returns numeric as $$
+	select p.initial_amount + (p.monthly_amount * p.month_count)
 $$ language sql stable;
 
--- create table project_month (
--- 	project_id uuid not null references project(id),
--- 	month_number smallint not null,
--- 	budget_amount numeric not null check(budget_amount >= 0),
--- 	description text not null
--- );
+create function project_funding_requirement(p project) returns numeric as $$
+	select p.project_base_funding_requirement + p.prize_amount
+$$ language sql stable;
 
--- create type bad_input_project_month_do_not_use as (
--- 	budget_amount numeric,
--- 	description text
--- );
--- create domain input_project_month as bad_input_project_month_do_not_use
--- not null
--- check ((value).budget_amount is not null and (value).description is not null and (value).budget_amount >= 0);
+create table project_update (
+	id uuid primary key default gen_random_uuid(),
+	project_id uuid references project(id),
+	"text" text not null
+);
 
--- -- TODO only the project owner can do this, and only while in DRAFT phase
--- create function update_project_months(arg_project_id uuid, arg_project_months input_project_month[]) returns void as $$
--- 	delete from project_month where project_id = arg_project_id;
-
--- 	insert into project_month (project_id, month_number, budget_amount, description)
--- 	select arg_project_id, month_number, budget_amount, description
--- 	from unnest(arg_project_months) with ordinality as m(budget_amount, description, month_number)
--- $$ language sql volatile strict security definer;
 
 create type project_payment_kind as enum('WITH_INITIAL', 'NORMAL_MONTHLY', 'PRIZE');
 create table project_payment (
@@ -60,23 +44,131 @@ create table project_payment (
 	primary key (project_id, projected_date),
 	amount numeric not null check(amount > 0),
 	kind project_payment_kind not null,
+	is_last bool not null,
 	executed_at timestamp default null
 );
-
 create unique index project_projected_date_month_unique
 on project_payment(project_id, date_trunc('month', projected_date::timestamp));
 
+
+create table pledge (
+	pledger_id uuid not null references account(id),
+	project_id uuid not null references project(id),
+	amount numeric not null
+);
+
+
+create table pledge_vote (
+	pledger_id uuid not null references account(id),
+	project_id uuid not null references project(id),
+	primary key (pledger_id, project_id),
+	should_continue bool not null
+);
+create function cast_vote(arg_pledger_id uuid, arg_project_id uuid, arg_should_continue bool) returns void as $$
+	insert into pledge_vote (pledger_id, project_id, should_continue) values (arg_pledger_id, arg_project_id, arg_should_continue)
+	on conflict (pledger_id, project_id) do
+	update set should_continue = arg_should_continue
+	where pledge_vote.pledger_id = arg_pledger_id and pledge_vote.project_id = arg_project_id
+$$ language sql volatile strict security definer;
+
+
+
+create function project_months_passed(p project) returns smallint as $$
+	-- TODO consider storing this on the project table and updating when payments are made
+	select count(*)
+	from project_payment
+	where project_id = p.id and executed_at is not null and kind != 'PRIZE'
+$$ language sql stable;
+
+create function project_funds_paid(p project) returns numeric as $$
+	select sum(amount)
+	from project_payment
+	where project_id = p.id and executed_at is not null
+$$ language sql stable;
+
+create function project_total_pledger_count(p project) returns int as $$
+	select count(distinct pledge.pledger_id)
+	from pledge
+	where pledge.project_id = p.id
+$$ language sql stable;
+
+create function project_total_pledged_amount(p project) returns numeric as $$
+	select sum(amount)
+	from pledge
+	where pledge.project_id = p.id
+$$ language sql stable;
+
+create function project_actual_prize_amount(p project) returns numeric as $$
+	select greatest(p.prize_amount, p.project_total_pledged_amount - p.project_base_funding_requirement)
+$$ language sql stable;
+
+
+create type overall_pledge_vote as (
+	weight_in_favor numeric,
+	weight_opposed numeric,
+	should_continue bool
+);
+create function project_overall_pledge_vote(p project) returns overall_pledge_vote as $$
+	with
+	overall_pledge as (
+		select pledge.pledger_id as pledger_id, pledge.project_id as project_id, sum(amount) as amount
+		from pledge
+		where pledge.project_id = p.id
+		group by pledge.pledger_id, pledge.project_id
+	),
+	aggregated as (
+		select
+			sum(case coalesce(pledge_vote.should_continue, true)
+				when true then overall_pledge.amount
+				when false then 0
+			end) as weight_in_favor,
+
+			sum(case coalesce(pledge_vote.should_continue, true)
+				when true then 0
+				when false then overall_pledge.amount
+			end) as weight_opposed
+		from
+			overall_pledge
+			left join pledge_vote using (pledger_id, project_id)
+	)
+	select
+		weight_in_favor,
+		weight_opposed,
+		(weight_in_favor - weight_opposed) > 0 as should_continue
+	from aggregated
+$$ language sql stable;
+
+
+create function create_new_draft(owner_id uuid, title text) returns uuid as $$
+	insert into project (owner_id, title, status, initial_amount, monthly_amount, month_count, prize_amount)
+	values (owner_id, title, 'DRAFT', 0, 0, 0, 0)
+	returning id
+$$ language sql volatile strict security definer;
+
+-- TODO all the status criteria below should probably error if the project isn't in the right state
+-- TODO only project owner can call this
+create function publish_draft(project_id uuid) returns void as $$
+	update project set status = 'PROPOSAL' where status = 'DRAFT' and id = project_id
+	-- funding_deadline = current_date + (interval 1 day * funding_days)
+$$ language sql volatile strict security definer;
+
+-- TODO only project owner can call this
+create function close_project(project_id uuid) returns void as $$
+	update project set status = 'CLOSED' where status = 'PROPOSAL' and id = project_id
+	-- TODO have to refund pledgers
+$$ language sql volatile strict security definer;
+
+
 -- TODO only the system can call this
 create procedure begin_project(project_id uuid) as $$
-	update project set status = 'FUNDED' where status = 'PROPOSAL' and id = project_id;
 
-	insert into project_payment(project_id, projected_date, amount, kind)
+	insert into project_payment(project_id, projected_date, amount, kind, is_last)
 	select
 		project_id as project_id,
 		(current_date + (interval '1 month' * payment_number)) as projected_date,
 		case payment_number
 			when 0 then initial_amount + monthly_amount
-			when month_count then prize_amount
+			when month_count then project.project_actual_prize_amount
 			else monthly_amount
 		end as amount,
 
@@ -84,17 +176,42 @@ create procedure begin_project(project_id uuid) as $$
 			when payment_number = 0 and initial_amount > 0 then 'WITH_INITIAL'::project_payment_kind
 			when payment_number = month_count then 'PRIZE'::project_payment_kind
 			else 'NORMAL_MONTHLY'::project_payment_kind
-		end as kind
+		end as kind,
+
+		payment_number = (case project.project_actual_prize_amount <= 0
+ 			when true then month_count - 1
+ 			else month_count
+ 		end) as is_last
 
 	from project, generate_series(0, month_count) as payment_number
 
 	where (case payment_number
 		when 0 then initial_amount + monthly_amount
-		when month_count then prize_amount
+		when month_count then project.project_actual_prize_amount
 		else monthly_amount
-	end) > 0
+	end) > 0;
 
+	update project set status = 'FUNDED' where id = project_id;
 $$ language sql;
+
+
+create function make_pledge(pledger_id uuid, project_id uuid, amount numeric) returns void as $$
+	declare funding_requirement_reached bool;
+	begin
+		insert into pledge (pledger_id, project_id, amount) values (pledger_id, project_id, amount);
+
+		select project.project_total_pledged_amount >= project.project_funding_requirement
+		into funding_requirement_reached
+		from project
+		where id = project_id;
+
+		if funding_requirement_reached then
+			call begin_project(project_id);
+		end if;
+	-- TODO this has to be part of a larger flow
+	end;
+$$ language plpgsql volatile strict security definer;
+
 
 -- TODO use this to perform assertions about correctness
 -- select
@@ -107,19 +224,45 @@ $$ language sql;
 create function project_next_payment(p project) returns project_payment as $$
 	select project_payment.*
 	from project_payment
-	where project_id = p.id and executed_at is null
+	where project_id = p.id and p.status = 'FUNDED' and executed_at is null
 	order by projected_date asc limit 1
 $$ language sql stable;
 
 
 -- TODO this has to be in concert with actual code executing the payments
 create procedure execute_payments() as $$
-	update project_payment set executed_at = now()
-	from project
-	where project_payment.project_id = project.id and project.status = 'FUNDED'
-		and executed_at is null and projected_date <= now()
+	with
+	funded_project as (
+		select
+			id as project_id,
+			(project.project_overall_pledge_vote).should_continue as should_continue,
+			case
+				when not (project.project_overall_pledge_vote).should_continue then 'FAILED'::project_status_enum
+				-- TODO this is more complicated, if multiple payments are executed then the next one won't be the is_last one
+				-- this would be more robust if it didn't use next_payment, but instead simply asked if *all* payments are in the past, and so will be executed
+				when (project.project_next_payment).is_last then 'COMPLETE'::project_status_enum
+				else null
+			end as new_status
+		from project
+		where status = 'FUNDED'
+	),
+
+	payment_update as (
+		update project_payment set executed_at = now()
+		from funded_project
+		where funded_project.project_id = project_payment.project_id
+			and executed_at is null and projected_date <= now()
+			and funded_project.should_continue
+	)
+	update project set status = funded_project.new_status
+	from funded_project where project.id = funded_project.project_id and funded_project.new_status is not null
 $$ language sql;
 
+-- create view payments_to_execute as
+-- need an order by window statement
+-- select project.project_next_payment
+-- from project
+-- where
 
 -- create procedure execute_payments_dev_unsafe() as $$
 -- 	-- project_id, projected_date, amount, kind, executed_at
@@ -134,198 +277,7 @@ $$ language sql;
 
 
 
--- create function create_new_draft(owner_id uuid, title text) returns uuid as $$
--- 	insert into project (owner_id, title, status, months, prize_amount)
--- 	values (owner_id, title, 'DRAFT', '{}', 0)
--- 	returning id
--- $$ language sql volatile strict security definer;
 
--- -- TODO all the status criteria below should probably error if the project isn't in the right state
--- -- TODO only project owner can call this
--- create function publish_draft(project_id uuid) returns void as $$
--- 	update project set status = 'PROPOSAL' where status = 'DRAFT' and id = project_id
--- $$ language sql volatile strict security definer;
-
--- -- TODO only project owner can call this
--- create function close_project(project_id uuid) returns void as $$
--- 	update project set status = 'CLOSED' where status = 'PROPOSAL' and id = project_id
--- 	-- TODO have to refund pledgers
--- $$ language sql volatile strict security definer;
-
--- -- TODO only the system can call this
--- create procedure complete_project(project_id uuid) as $$
--- 	update project set status = 'COMPLETE' where status = 'FUNDED' and id = project_id
--- $$ language sql;
-
--- -- TODO only the system can call this
--- create procedure fail_project(project_id uuid) as $$
--- 	update project set status = 'FAILED' where status = 'FUNDED' and id = project_id
--- $$ language sql;
-
--- create table project_update (
--- 	id uuid primary key default gen_random_uuid(),
--- 	project_id uuid references project(id),
--- 	"text" text not null
--- );
-
-
-
--- create table pledge (
--- 	pledger_id uuid not null references account(id),
--- 	project_id uuid not null references project(id),
--- 	amount numeric not null
--- );
--- create function make_pledge(pledger_id uuid, project_id uuid, amount numeric) returns void as $$
--- 	insert into pledge (pledger_id, project_id, amount) values (pledger_id, project_id, amount)
--- 	-- TODO this has to be part of a larger flow
--- $$ language sql volatile strict security definer;
-
-
--- create table pledge_vote (
--- 	pledger_id uuid not null references account(id),
--- 	project_id uuid not null references project(id),
--- 	primary key (pledger_id, project_id),
--- 	should_continue bool not null
--- );
--- create function cast_vote(arg_pledger_id uuid, arg_project_id uuid, arg_should_continue bool) returns void as $$
--- 	insert into pledge_vote (pledger_id, project_id, should_continue) values (arg_pledger_id, arg_project_id, arg_should_continue)
--- 	on conflict (pledger_id, project_id) do
--- 	update set should_continue = arg_should_continue
--- 	where pledge_vote.pledger_id = arg_pledger_id and pledge_vote.project_id = arg_project_id
--- $$ language sql volatile strict security definer;
-
-
--- create function project_overall_pledger_count(p project) returns int as $$
--- 	select count(distinct pledge.pledger_id)
--- 	from pledge
--- 	where pledge.project_id = p.id
--- $$ language sql stable;
-
--- create function project_overall_pledged_amount(p project) returns numeric as $$
--- 	select sum(amount)
--- 	from pledge
--- 	where pledge.project_id = p.id
--- $$ language sql stable;
-
-
-
--- create type overall_pledge_vote as (
--- 	weight_in_favor numeric,
--- 	weight_opposed numeric,
--- 	should_continue bool
--- );
--- create function project_overall_pledge_votes(p project) returns overall_pledge_vote as $$
--- 	with
--- 	overall_pledge as (
--- 		select pledge.pledger_id as pledger_id, pledge.project_id as project_id, sum(amount) as amount
--- 		from pledge
--- 		where pledge.project_id = p.id
--- 		group by pledge.pledger_id, pledge.project_id
--- 	)
--- 	select
--- 		sum(case coalesce(pledge_vote.should_continue, true)
--- 			when true then overall_pledge.amount
--- 			when false then 0
--- 		end) as weight_in_favor,
-
--- 		sum(case coalesce(pledge_vote.should_continue, true)
--- 			when true then 0
--- 			when false then overall_pledge.amount
--- 		end) as weight_opposed,
-
--- 		sum(case coalesce(pledge_vote.should_continue, true)
--- 			when true then overall_pledge.amount
--- 			when false then -overall_pledge.amount
--- 		end) > 0 as should_continue
-
--- 	from
--- 		overall_pledge
--- 		left join pledge_vote using (pledger_id, project_id)
-
--- $$ language sql stable;
-
-
-
-
-
-
-
-
-
-
-
-
-
--- create function account_pledged_projects(arg_account account) returns numeric as $$
--- 	select
--- 		project.id,
--- 		project.title,
-
--- 	from
--- 		project
--- 		join account on
--- 	where pledge.project_id = p.id
--- $$ language sql stable;
-
-
-
-
-
-
-
--- create view full_project as
--- select
--- 	project.*,
-
--- 	sum(case pledge_vote.should_continue
--- 		when true then pledge.amount
--- 		when false then 0
--- 	end) as current_weight_should_continue,
-
--- 	sum(case pledge_vote.should_continue
--- 		when true then 0
--- 		when false then pledge.amount
--- 	end) as current_weight_should_not_continue,
-
--- 	sum(case pledge_vote.should_continue
--- 		when true then pledge.amount
--- 		when false then -pledge.amount
--- 	end) > 0 as current_should_continue
-
-
--- from
--- 	project
--- 	join project using (id)
--- 	join pledge on project.id = pledge.project_id
--- 	join pledge_vote on pledge.pledger_id = pledge_vote.pledger_id and pledge.project_id = pledge_vote.project_id
--- group by project.id;
-
--- -- -- should project continue function
--- -- select
--- -- 	project.id as project_id,
-
--- -- 	case pledge_votes.should_continue
--- -- 		when true then pledge.amount
--- -- 		when false then -pledge.amount
--- -- 	end
-
--- -- 	-- sum(case pledge_votes.should_continue
--- -- 	-- 	when true then pledge.amount
--- -- 	-- 	when false then -pledge.amount
--- -- 	-- end) total_,
-
--- -- 	-- sum(case pledge_votes.should_continue
--- -- 	-- 	when true then pledge.amount
--- -- 	-- 	when false then -pledge.amount
--- -- 	-- end) > 0 as total_should_continue
-
--- -- from
--- -- 	project
--- -- 	-- TODO this has to work on project ids???
--- -- 	join pledge on project.id = pledge.project_id
--- -- 	-- has the effect of not considering any pledge_votes that were accidentally cast by a person who didn't actually pledge
--- -- 	join pledge_vote using (pledger_id, project_id)
--- -- where project.id = project_id;
 
 
 
@@ -343,21 +295,30 @@ create function r() returns uuid immutable language sql as $$
 $$;
 
 insert into account (id, "name") values (u('1'), 'leia');
+insert into account (id, "name") values (u('2'), 'han');
+
 
 -- insert into project (id, owner_id, title, status, months, prize_amount) values (
 insert into project (id, owner_id, title, status, initial_amount, monthly_amount, month_count, prize_amount) values (
 	u('d'), u('1'), 'leia project', 'FUNDED',
-	1000, 2000, 10, 0
+	1000, 2000, 10, 100
 );
 
-call begin_project(u('d'));
+select make_pledge(u('2'), u('d'), 1000 + (2000 * 10) + 200);
 
-select projected_date, amount, kind, executed_at from project_payment order by projected_date;
+update project_payment set projected_date = (projected_date - interval '6 month');
+-- update project_payment set executed_at = now() where not is_last;
+
 call execute_payments();
-select projected_date, amount, kind, executed_at from project_payment order by projected_date;
+select projected_date, amount, kind, is_last, executed_at from project_payment order by projected_date;
+select title, status from project;
+
+select cast_vote(u('2'), u('d'), false);
+
 call execute_payments();
-select projected_date, amount, kind, executed_at from project_payment order by projected_date;
+select projected_date, amount, kind, is_last, executed_at from project_payment order by projected_date;
+select title, status from project;
+
 call execute_payments();
-select projected_date, amount, kind, executed_at from project_payment order by projected_date;
-call execute_payments();
-select projected_date, amount, kind, executed_at from project_payment order by projected_date;
+select projected_date, amount, kind, is_last, executed_at from project_payment order by projected_date;
+select title, status from project;
