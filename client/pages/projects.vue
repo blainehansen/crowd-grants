@@ -8,7 +8,8 @@ div
 			div(v-for="project in projects", :key="project.id")
 				NuxtLink(:to="`/project/${project.id}`") {{ project.title }}
 				NuxtLink(:to="`/person/${project.owner.id}`") {{ project.owner.name }}
-				p {{ project.monthsPassed }} have passed, {{ project.months.length - project.monthsPassed }} more to go.
+				p {{ project.monthsPassed }} have passed, {{ project.monthCount - project.monthsPassed }} more to go.
+				p {{ project.fundsPaid }} paid of {{ project.totalPledgedAmount }}
 
 </template>
 

@@ -38,23 +38,12 @@ div
 				template(v-if="pledgedProject.status.type === 'CLOSED' || pledgedProject.status.type === 'FAILED'")
 					p {{ pledgedProject.status.refundedAmount }} was able to be refunded to you.
 
-
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import api, { ProposalStatusEnum } from '@/utils/api'
-
-function renderStatus(status: ProposalStatusEnum) {
-	switch (status) {
-		case ProposalStatusEnum.DRAFT: return 'Draft'
-		case ProposalStatusEnum.PROPOSAL: return 'Proposal'
-		case ProposalStatusEnum.CLOSED: return 'Closed'
-		case ProposalStatusEnum.FUNDED: return 'Funded'
-		case ProposalStatusEnum.COMPLETE: return 'Complete'
-		case ProposalStatusEnum.FAILED: return 'Failed'
-	}
-}
+import { renderStatus } from '@/utils'
+import api from '@/utils/api'
 
 const promise = computed(async () => {
 	const { account, allProjects, pledgedProjects } = await api.FetchAccount()

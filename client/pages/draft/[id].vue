@@ -4,17 +4,13 @@ ResultPromise(:promise="draftPromise")
 	template(#loading): | ...
 	template(#err="err"): | {{ err }}
 	template(#ok="draft")
+		input(v-model="draft.title", placeholder="title")
+		input(v-model.number="draft.initialAmount", placeholder="initial funding requirement, for upfront costs")
+		input(v-model.number="draft.monthCount", placeholder="how many months will your project run?")
+		input(v-model.number="draft.monthlyAmount", placeholder="how much per month do you need?")
+		input(v-model.number="draft.prizeAmount", placeholder="prize amount")
 
-		input(v-model="draft.title")
-
-		div(v-for="(month, index) in draft.months")
-			input(v-model.number="month.budgetAmount")
-			input(v-model="month.description")
-			button(@click="deleteMonth(draft, index)") delete month
-
-		button(@click="addMonth(draft)") add month
-
-		input(v-model.number="draft.prizeAmount")
+		textarea(v-model="draft.body", placeholder="describe your project")
 
 		button(@click="save(draft)", :disabled="!valid") save
 		p(v-if="saveFeedback") {{ saveFeedback }}
@@ -36,16 +32,11 @@ const draftPromise = computed(() => api.FetchDraft({ draftId: route.params.id, u
 type Draft = Unpromise<typeof api.FetchDraft>['project']
 
 const valid = computed(() => {
-	// TODO
-	return true
+	return draft.initialAmount >= 0
+		&& draft.monthCount >= 0
+		&& draft.monthlyAmount >= 0
+		&& draft.prizeAmount >= 0
 })
-
-function addMonth(draft: Draft) {
-	draft.months.push({ budgetAmount: 0, description: '' })
-}
-function deleteMonth(draft: Draft, index: number) {
-	draft.months.splice(index, 1)
-}
 
 const saveFeedback = ref(null as string | null)
 function save(draft: Draft) {

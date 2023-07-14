@@ -5,22 +5,17 @@ ResultPromise(:promise="projectPromise")
 	template(#err="err"): | {{ err }}
 	template(#ok="project")
 		h1 {{ project.title }}
-
-		h2 {{ project.monthsPassed }} have passed, {{ project.months.length - project.monthsPassed }} more to go.
-		h2 {{ project.budgetSpent }} has been spent of {{ project.budgetAmount }}.
-
-		h2 Prize amount: {{ project.prizeAmount }}
-
-		p Months
-		div(v-for="(month, index) in project.months")
-			h2 {{ month.budgetAmount }}
-			h2 {{ month.description }}
-			p {{ month.completed ? 'passed' : 'future' }}
-
 		h2 Creator:
 		NuxtLink(:to="`/person/${project.owner.id}`") {{ project.owner.name }}
 
-		template(v-if="userId !== null && project.userPledge !== null")
+		div {{ project.body }}
+
+		h2 {{ project.monthsPassed }} have passed, {{ project.monthCount - project.monthsPassed }} more to go.
+		h2 {{ project.fundsPaid }} has been spent of {{ project.totalPledgedAmount }}.
+
+		h2 Actual prize amount: {{ project.actualPrizeAmount }} (originally asked for {{ project.prizeAmount }})
+
+		template(v-if="project.userPledge !== null")
 			p You pledged {{ project.userPledge.amount }} {{ project.userPledge.count > 1 ? `in ${project.userPledge.count} pledges` : '' }}
 			p(v-if="project.userPledge.vote !== null") You've cast a vote to {{ project.userPledge.vote ? 'continue' : 'discontinue' }} this project.
 			p(v-else) You haven't cast a vote to discontinue this project.
@@ -45,7 +40,7 @@ const route = useRoute()
 // const executeFlag = ref(true)
 const projectPromise = computed(() => {
 	// executeFlag.value
-	return api.FetchProject({ projectId: route.params.id })
+	return api.FetchProject({ projectId: route.params.id, userId: userId.value })
 })
 
 const voteFeedback = ref(null as string | null)

@@ -15,10 +15,11 @@ create table project (
 	owner_id uuid not null references account(id),
 	status project_status_enum not null,
 	title text not null,
+	body text not null,
 	-- funding_days smallint not null check(funding_days > 0),
 	initial_amount numeric not null check(initial_amount >= 0),
-	monthly_amount numeric not null check(monthly_amount >= 0),
 	month_count smallint not null check(month_count >= 0),
+	monthly_amount numeric not null check(monthly_amount >= 0),
 	prize_amount numeric not null check(prize_amount >= 0)
 );
 
@@ -35,6 +36,25 @@ create table project_update (
 	project_id uuid references project(id),
 	"text" text not null
 );
+
+
+create function account_published_projects(a account) returns setof project as $$
+	select project.*
+	from project
+	where owner_id = a.id and project.status != 'DRAFT'
+$$ language sql stable;
+
+-- create function proposals() returns setof project as $$
+-- 	select project.*
+-- 	from project
+-- 	where project.status == 'PROPOSAL'
+-- $$ language sql stable;
+
+-- create function projects() returns setof project as $$
+-- 	select project.*
+-- 	from project
+-- 	where project.status == 'PROPOSAL'
+-- $$ language sql stable;
 
 
 create type project_payment_kind as enum('WITH_INITIAL', 'NORMAL_MONTHLY', 'PRIZE');
@@ -138,10 +158,21 @@ create function project_overall_pledge_vote(p project) returns overall_pledge_vo
 	from aggregated
 $$ language sql stable;
 
+create type user_pledge as (
+	vote bool,
+	amount numeric,
+	count smallint
+);
+create function project_user_pledge(p project, user_id uuid) returns user_pledge as $$
+	select pledge_vote.should_continue as vote, sum(pledge.amount) as amount, count(*) as count
+	from pledge left join pledge_vote using (project_id, pledger_id)
+	where pledge.project_id = p.id and pledge.pledger_id = user_id
+	group by pledge_vote.should_continue
+$$ language sql stable;
 
 create function create_new_draft(owner_id uuid, title text) returns uuid as $$
-	insert into project (owner_id, title, status, initial_amount, monthly_amount, month_count, prize_amount)
-	values (owner_id, title, 'DRAFT', 0, 0, 0, 0)
+	insert into project (owner_id, title, body, status, initial_amount, monthly_amount, month_count, prize_amount)
+	values (owner_id, title, '', 'DRAFT', 0, 0, 0, 0)
 	returning id
 $$ language sql volatile strict security definer;
 
@@ -284,41 +315,42 @@ $$ language sql;
 
 
 
--- TESTING
+-- -- TESTING
 
-create function u(i text) returns uuid immutable language sql as $$
-	select lpad(i, 32, '0')::uuid;
-$$;
+-- create function u(i text) returns uuid immutable language sql as $$
+-- 	select lpad(i, 32, '0')::uuid;
+-- $$;
 
-create function r() returns uuid immutable language sql as $$
-	select 'ffffffffffffffffffffffffffffffff'::uuid;
-$$;
+-- create function r() returns uuid immutable language sql as $$
+-- 	select 'ffffffffffffffffffffffffffffffff'::uuid;
+-- $$;
 
-insert into account (id, "name") values (u('1'), 'leia');
-insert into account (id, "name") values (u('2'), 'han');
+-- insert into account (id, "name") values (u('1'), 'leia');
+-- insert into account (id, "name") values (u('2'), 'han');
 
 
--- insert into project (id, owner_id, title, status, months, prize_amount) values (
-insert into project (id, owner_id, title, status, initial_amount, monthly_amount, month_count, prize_amount) values (
-	u('d'), u('1'), 'leia project', 'FUNDED',
-	1000, 2000, 10, 100
-);
+-- -- insert into project (id, owner_id, title, status, months, prize_amount) values (
+-- insert into project (id, owner_id, title, body, status, initial_amount, monthly_amount, month_count, prize_amount) values (
+-- 	u('d'), u('1'), 'leia project', '', 'FUNDED',
+-- 	1000, 2000, 10, 100
+-- );
 
-select make_pledge(u('2'), u('d'), 1000 + (2000 * 10) + 200);
+-- select make_pledge(u('2'), u('d'), 1000 + (2000 * 10) + 200);
+-- select cast_vote(u('2'), u('d'), true);
 
-update project_payment set projected_date = (projected_date - interval '6 month');
--- update project_payment set executed_at = now() where not is_last;
+-- update project_payment set projected_date = (projected_date - interval '6 month');
+-- -- update project_payment set executed_at = now() where not is_last;
 
-call execute_payments();
-select projected_date, amount, kind, is_last, executed_at from project_payment order by projected_date;
-select title, status from project;
+-- call execute_payments();
+-- select projected_date, amount, kind, is_last, executed_at from project_payment order by projected_date;
+-- select title, status from project;
 
-select cast_vote(u('2'), u('d'), false);
+-- select cast_vote(u('2'), u('d'), false);
 
-call execute_payments();
-select projected_date, amount, kind, is_last, executed_at from project_payment order by projected_date;
-select title, status from project;
+-- call execute_payments();
+-- select projected_date, amount, kind, is_last, executed_at from project_payment order by projected_date;
+-- select title, status from project;
 
-call execute_payments();
-select projected_date, amount, kind, is_last, executed_at from project_payment order by projected_date;
-select title, status from project;
+-- call execute_payments();
+-- select projected_date, amount, kind, is_last, executed_at from project_payment order by projected_date;
+-- select title, status from project;

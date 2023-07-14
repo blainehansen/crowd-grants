@@ -1,13 +1,20 @@
+query FetchPerson($id: UUID!) {
+	person: account(id: $id) {
+		id
+		name
+		publishedProjects {
+			id
+			title
+			status
+		}
+	}
+}
+
 query FetchDrafts($userId: UUID!) {
 	projects(condition: {ownerId: $userId, status: DRAFT}) {
 		nodes {
 			id
 			title
-			months {
-				budgetAmount
-				description
-			}
-			prizeAmount
 		}
 	}
 }
@@ -16,10 +23,10 @@ query FetchDraft($draftId: UUID!, $userId: UUID!) {
 	project(id: $draftId, ownerId: $userId, status: DRAFT) {
 		id
 		title
-		months {
-			budgetAmount
-			description
-		}
+		body
+		initialAmount
+		monthCount
+		monthlyAmount
 		prizeAmount
 	}
 }
@@ -30,9 +37,19 @@ mutation CreateDraft($input: CreateNewDraftInput!) {
 	}
 }
 
-mutation SaveDraft($id: UUID!, $title: String!, $months: [ProjectMonthInput]!, $prizeAmount: BigFloat!) {
+mutation SaveDraft(
+	$projectId: UUID!, $title: String!, $body: String!,
+	$initialAmount: BigFloat!, $monthCount: BigFloat!, $monthlyAmount: BigFloat!, $prizeAmount: BigFloat!,
+) {
 	updateProject(
-		input: {id: $id, patch: {title: $title, months: $months, prizeAmount: $prizeAmount}}
+		input: {id: $projectId, patch: {
+			title: $title,
+			body: $body,
+			initialAmount: $initialAmount,
+			monthCount: $monthCount,
+			monthlyAmount: $monthlyAmount,
+			prizeAmount: $prizeAmount,
+		}}
 	)
 }
 
@@ -69,27 +86,87 @@ query FetchProposal($proposalId: UUID!) {
 			name
 		}
 		title
-		months {
-			budgetAmount
-			description
-		}
-		budgetAmount
-		fundingRequirement
+		body
+		initialAmount
+		monthCount
+		monthlyAmount
 		prizeAmount
+		# baseFundingRequirement
+		fundingRequirement
 		overallPledgedAmount
 		overallPledgerCount
 	}
 }
 
 
-mutation MakePledge($pledgerId: UUID!, $projectId: UUID!, $amount: BigFloat!, ) {
+mutation MakePledge($pledgerId: UUID!, $projectId: UUID!, $amount: BigFloat!) {
 	makePledge(
 		input: {pledgerId: $pledgerId, projectId: $projectId, amount: $amount}
 	)
+}
+
+query FetchProject($projectId: UUID!, $userId: UUID!) {
+	project(id: $projectId) {
+		id
+		owner {
+			id
+			name
+		}
+		title
+		body
+		status
+		initialAmount
+		monthCount
+		monthlyAmount
+		prizeAmount
+
+		# baseFundingRequirement
+		fundingRequirement
+		actualPrizeAmount
+		totalPledgedAmount
+		totalPledgerCount
+
+		fundsPaid
+		monthsPassed
+		nextPayment {
+			amount
+			isLast
+			kind
+		}
+		overallPledgeVote {
+			shouldContinue
+			weightInFavor
+			weightOpposed
+		}
+
+		userPledge(userId: $userId) {
+			vote
+			amount
+			count
+		}
+	}
 }
 
 mutation CastVote($pledgerId: UUID!, $projectId: UUID!, $shouldContinue: Boolean!) {
 	castVote(
 		input: {argPledgerId: $pledgerId, argProjectId: $projectId, argShouldContinue: $shouldContinue}
 	)
+}
+
+
+query FetchProjects {
+	projects {
+		nodes {
+			id
+			owner {
+				id
+				name
+			}
+			title
+			totalPledgedAmount
+			monthsPassed
+			monthCount
+			fundsPaid
+		}
+	}
 }

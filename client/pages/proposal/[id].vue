@@ -5,21 +5,14 @@ ResultPromise(:promise="proposalPromise")
 	template(#err="err"): | {{ err }}
 	template(#ok="proposal")
 		h1 {{ proposal.title }}
-
-		h2 Funding requirement: {{ proposal.fundingRequirement }}
-		h2 Budget amount: {{ proposal.budgetAmount }}
-		h2 Prize amount: {{ proposal.prizeAmount }}
-		h2 Overall pledged amount: {{ proposal.overallPledgedAmount }} (from {{ proposal.overallPledgerCount }} pledgers)
-
-		p Proposed months
-		div(v-for="(month, index) in proposal.months")
-			h2 {{ month.budgetAmount }}
-			h2 {{ month.description }}
-
-		h2 {{ proposal.prizeAmount }}
-
 		h2 Creator:
 		NuxtLink(:to="`/person/${proposal.owner.id}`") {{ proposal.owner.name }}
+
+		h2 Funding requirement: {{ proposal.fundingRequirement }} ({{ proposal.initialAmount }} initial, {{ proposal.monthlyAmount }} for {{ proposal.monthCount }} months, and a prize of {{ proposal.prizeAmount }})
+
+		h2 Overall pledged amount: {{ proposal.overallPledgedAmount }} (from {{ proposal.overallPledgerCount }} pledgers)
+
+		div {{ proposal.body }}
 
 		template(v-if="userId !== null")
 			input(v-model.number="pledgeAmount")
@@ -41,6 +34,7 @@ const proposalPromise = computed(() => {
 	return api.FetchProposal({ proposalId: route.params.id })
 })
 
+const pledgeAmount = ref('')
 
 const pledgeFeedback = ref(null as string | null)
 async function pledge(userId: string) {

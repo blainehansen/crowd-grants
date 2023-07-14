@@ -23,3 +23,16 @@ export async function handleFeedback<F, E>(
 		}
 	})
 }
+
+import { ProjectStatusEnum } from '@/utils/api'
+
+export function renderStatus(status: ProjectStatusEnum) {
+	switch (status) {
+		case ProjectStatusEnum.DRAFT: return 'Draft'
+		case ProjectStatusEnum.PROPOSAL: return 'Proposal'
+		case ProjectStatusEnum.CLOSED: return 'Closed'
+		case ProjectStatusEnum.FUNDED: return 'Funded'
+		case ProjectStatusEnum.COMPLETE: return 'Complete'
+		case ProjectStatusEnum.FAILED: return 'Failed'
+	}
+}
