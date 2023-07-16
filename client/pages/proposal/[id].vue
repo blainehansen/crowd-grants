@@ -10,7 +10,7 @@ ResultPromise(:promise="proposalPromise")
 
 		h2 Funding requirement: {{ proposal.fundingRequirement }} ({{ proposal.initialAmount }} initial, {{ proposal.monthlyAmount }} for {{ proposal.monthCount }} months, and a prize of {{ proposal.prizeAmount }})
 
-		h2 Overall pledged amount: {{ proposal.overallPledgedAmount }} (from {{ proposal.overallPledgerCount }} pledgers)
+		h2 Overall pledged amount: {{ proposal.totalPledgedAmount }} (from {{ proposal.totalPledgerCount }} pledgers)
 
 		div {{ proposal.body }}
 
@@ -22,16 +22,18 @@ ResultPromise(:promise="proposalPromise")
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useRoute, navigateTo } from '#imports'
 import api from '@/utils/api'
-import { userId } from '@composables'
-import { useRoute, navigateTo } from 'nuxt'
+import { handleFeedback } from '@/utils'
+import { userId } from '@/composables'
+
 const route = useRoute()
 
 // const executeFlag = ref(true)
 const proposalPromise = computed(() => {
 	// executeFlag.value
-	return api.FetchProposal({ proposalId: route.params.id })
+	return api.FetchProposal({ proposalId: route.params.id as string })
 })
 
 const pledgeAmount = ref('')
@@ -46,11 +48,11 @@ async function pledge(userId: string) {
 
 	const succeeded = await handleFeedback(
 		pledgeFeedback, "loading...", "pledged!", e => `oh no! ${e}`,
-		api.MakePledge(userId, route.params.id, parsedPledgeAmount),
+		api.MakePledge({ pledgerId: userId, projectId: route.params.id as string, amount: parsedPledgeAmount}),
 	)
 	if (succeeded)
 		// force refresh
-		navigateTo(route.url)
+		navigateTo(route.path)
 		// executeFlag.value = !executeFlag.value
 }
 

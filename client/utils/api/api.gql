@@ -1,14 +1,42 @@
-query FetchPerson($id: UUID!) {
-	person: account(id: $id) {
+query FetchPerson($personId: UUID!) {
+	person: account(id: $personId) {
 		id
 		name
 		publishedProjects {
-			id
-			title
-			status
+			nodes {
+				id
+				title
+				status
+			}
 		}
 	}
 }
+
+query FetchYou($userId: UUID!) {
+	account(id: $userId) {
+		id
+		name
+		projects: projectsByOwnerId {
+			nodes {
+				id
+				title
+				status
+			}
+		}
+		projectPledges {
+			nodes {
+				projectId
+				title
+				ownerId
+				ownerName
+				amount
+				count
+				vote
+			}
+		}
+	}
+}
+
 
 query FetchDrafts($userId: UUID!) {
 	projects(condition: {ownerId: $userId, status: DRAFT}) {
@@ -19,8 +47,8 @@ query FetchDrafts($userId: UUID!) {
 	}
 }
 
-query FetchDraft($draftId: UUID!, $userId: UUID!) {
-	project(id: $draftId, ownerId: $userId, status: DRAFT) {
+query FetchDraft($draftId: UUID!) {
+	project(id: $draftId) {
 		id
 		title
 		body
@@ -39,7 +67,7 @@ mutation CreateDraft($input: CreateNewDraftInput!) {
 
 mutation SaveDraft(
 	$projectId: UUID!, $title: String!, $body: String!,
-	$initialAmount: BigFloat!, $monthCount: BigFloat!, $monthlyAmount: BigFloat!, $prizeAmount: BigFloat!,
+	$initialAmount: BigFloat!, $monthCount: Int!, $monthlyAmount: BigFloat!, $prizeAmount: BigFloat!,
 ) {
 	updateProject(
 		input: {id: $projectId, patch: {
@@ -50,11 +78,11 @@ mutation SaveDraft(
 			monthlyAmount: $monthlyAmount,
 			prizeAmount: $prizeAmount,
 		}}
-	)
+	) { _: clientMutationId }
 }
 
 mutation PublishDraft($projectId: UUID!) {
-	publishDraft(input: {projectId: $projectId})
+	publishDraft(input: {projectId: $projectId}) { _: clientMutationId }
 }
 
 # mutation UnpublishDraft($projectId: UUID!) {
@@ -71,7 +99,7 @@ query FetchProposals {
 				name
 			}
 			title
-			overallPledgedAmount
+			totalPledgedAmount
 			fundingRequirement
 		}
 	}
@@ -79,7 +107,7 @@ query FetchProposals {
 
 
 query FetchProposal($proposalId: UUID!) {
-	project(id: $proposalId, status: PROPOSAL) {
+	project(id: $proposalId) {
 		id
 		owner {
 			id
@@ -93,8 +121,8 @@ query FetchProposal($proposalId: UUID!) {
 		prizeAmount
 		# baseFundingRequirement
 		fundingRequirement
-		overallPledgedAmount
-		overallPledgerCount
+		totalPledgedAmount
+		totalPledgerCount
 	}
 }
 
@@ -102,7 +130,7 @@ query FetchProposal($proposalId: UUID!) {
 mutation MakePledge($pledgerId: UUID!, $projectId: UUID!, $amount: BigFloat!) {
 	makePledge(
 		input: {pledgerId: $pledgerId, projectId: $projectId, amount: $amount}
-	)
+	) { _: clientMutationId }
 }
 
 query FetchProject($projectId: UUID!, $userId: UUID!) {
@@ -150,7 +178,7 @@ query FetchProject($projectId: UUID!, $userId: UUID!) {
 mutation CastVote($pledgerId: UUID!, $projectId: UUID!, $shouldContinue: Boolean!) {
 	castVote(
 		input: {argPledgerId: $pledgerId, argProjectId: $projectId, argShouldContinue: $shouldContinue}
-	)
+	) { _: clientMutationId }
 }
 
 

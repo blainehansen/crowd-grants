@@ -23,6 +23,8 @@ create table project (
 	prize_amount numeric not null check(prize_amount >= 0)
 );
 
+-- TODO projects should only be selectable by their owner if they are in DRAFT status
+
 create function project_base_funding_requirement(p project) returns numeric as $$
 	select p.initial_amount + (p.monthly_amount * p.month_count)
 $$ language sql stable;
@@ -168,6 +170,26 @@ create function project_user_pledge(p project, user_id uuid) returns user_pledge
 	from pledge left join pledge_vote using (project_id, pledger_id)
 	where pledge.project_id = p.id and pledge.pledger_id = user_id
 	group by pledge_vote.should_continue
+$$ language sql stable;
+
+
+create type user_pledged_project as (
+	project_id uuid,
+	title text,
+	owner_id uuid, owner_name text,
+	vote bool, amount numeric, count smallint
+);
+create function account_project_pledges(a account) returns setof user_pledged_project as $$
+	select
+		project.id as project_id, project.title, project.owner_id, "owner"."name" as owner_name,
+		bool_and(coalesce(should_continue, true)) as vote, sum(pledge.amount) as amount, count(pledge.*) as count
+	from
+		pledge
+		left join pledge_vote using (project_id, pledger_id)
+		join project on pledge.project_id = project.id
+		join account as "owner" on project.owner_id = "owner".id
+	where pledge.pledger_id = a.id
+	group by project.id, project.title, project.owner_id, "owner"."name"
 $$ language sql stable;
 
 create function create_new_draft(owner_id uuid, title text) returns uuid as $$

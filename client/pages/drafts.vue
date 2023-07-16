@@ -16,8 +16,8 @@ div
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { navigateTo } from 'nuxt'
+import { ref, computed } from 'vue'
+import { navigateTo } from '#imports'
 import api from '@/utils/api'
 import { userId } from '@/composables'
 
@@ -25,18 +25,20 @@ const newDraftTitle = ref('')
 const createDraftErr = ref(null as string | null)
 
 const promise = computed(() => {
-	return api.FetchDrafts({ id: userId.value })
+	if (!userId.value) return
+	return api.FetchDrafts({ userId: userId.value })
 })
 
 async function createDraft() {
-	if (!newDraftTitle.value)
-	const createResult = await api.CreateDraft({ ownerId: userId.value, title: newDraftTitle.value })
+	if (!newDraftTitle.value || !userId.value) return
+
+	const createResult = await api.CreateDraft({ input: { ownerId: userId.value, title: newDraftTitle.value } })
 	if (createResult.isErr()) {
-		createDraftErr.value = createResult.error
+		createDraftErr.value = createResult.error.message
 		return
 	}
 	const draftId = createResult.value
-	return navigateTo(`/drafts/edit/${draftId}`)
+	return navigateTo(`/draft/${draftId}`)
 }
 
 </script>

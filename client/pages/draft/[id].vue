@@ -22,10 +22,10 @@ ResultPromise(:promise="draftPromise")
 
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
+import { useRoute, navigateTo } from '#imports'
 import api from '@/utils/api'
 import { handleFeedback, Unpromise } from '@/utils'
 import { userId } from '@/composables'
-import { useRoute } from 'nuxt'
 const route = useRoute()
 
 const draftPromise = computed(() => api.FetchDraft({ draftId: route.params.id, userId: userId.value }))
@@ -41,7 +41,7 @@ const valid = computed(() => {
 const saveFeedback = ref(null as string | null)
 function save(draft: Draft) {
 	handleFeedback(
-		saveFeedback, "saving...", "success!", (e) => `oh no! ${e}`
+		saveFeedback, "saving...", "success!", (e) => `oh no! ${e}`,
 		api.SaveDraft(draft),
 	)
 }
@@ -49,8 +49,8 @@ function save(draft: Draft) {
 const publishFeedback = ref(null as string | null)
 async function publish(_: Draft) {
 	await handleFeedback(
-		publishFeedback, "publishing...", "success! you'll be redirected soon", (e) => `oh no! ${e}`
-		api.PublishDraft(route.params.id),
+		publishFeedback, "publishing...", "success! you'll be redirected soon", (e) => `oh no! ${e}`,
+		api.PublishDraft({ projectId: route.params.id as string }),
 	)
 	return navigateTo(`/proposal/${route.params.id}`)
 }

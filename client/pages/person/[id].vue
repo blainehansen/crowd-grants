@@ -7,21 +7,21 @@ ResultPromise(:promise="personPromise")
 		h1 {{ person.name }}
 
 		NuxtLink(
-			v-for="project in publishedProjects", :key="project.id",
+			v-for="project in person.publishedProjects.nodes", :key="project.id",
 			tag="h2", :to="`/project/${project.id}`",
 		) {{ project.title }} ({{ renderStatus(project.status) }})
 
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useRoute } from '#imports'
 import api from '@/utils/api'
 import { renderStatus } from '@/utils'
-import { useRoute } from 'nuxt'
 const route = useRoute()
 
 const personPromise = computed(() => {
-	return api.FetchPerson({ personId: route.params.id })
+	return api.FetchPerson({ personId: route.params.id as string })
 })
 
 </script>

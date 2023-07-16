@@ -4,62 +4,40 @@ div
 	ResultPromise(:promise="promise")
 		template(#loading): | ...
 		template(#err="err"): h1 Something went wrong! {{ err }}
-		template(#ok="{ account, drafts, proposals, projects, completeProjects, closedProjects, failedProjects, pledgedProjects }")
+		template(#ok="account")
 			h1 {{ account.name }}
 
-			h2 drafts:
-			NuxtLink(v-for="draft in drafts", :key="draft.id", :to="`/draft/${draft.id}`") {{ draft.title }}
+			h2 Your projects:
+			NuxtLink(v-for="project in account.projects", :key="project.id", :to="projectLink(project)")
+				| {{ project.title }} ({{ renderStatus(project.status) }})
 
-			h2 proposals:
-			ProjectLink(v-for="proposal in proposals", :key="proposal.id", :project="proposal")
-			h2 projects:
-			ProjectLink(v-for="project in projects", :key="project.id", :project="project")
-			h2 complete projects:
-			ProjectLink(v-for="project in completeProjects", :key="project.id", :project="project")
-			h2 closed projects:
-			ProjectLink(v-for="project in closedProjects", :key="project.id", :project="project")
-			h2 failed projects:
-			ProjectLink(v-for="project in failedProjects", :key="project.id", :project="project")
-
-			div(v-for="pledgedProject in pledgedProjects")
-				p {{ pledgedProject.title }} ({{ renderStatus(pledgedProject.status).toLowerCase() }})
-				p You pledged {{ pledgedProject.pledgeAmount }} {{ pledgedProject.pledgeCount > 1 ? `in ${pledgedProject.pledgeCount} pledges` : '' }}
-
-				template(v-if="pledgedProject.status.type === 'PROPOSAL'")
-					h2 Funding requirement: {{ proposal.status.fundingRequirement }}
-					h2 Overall pledged amount: {{ proposal.status.overallPledgedAmount }}
-
-				template(v-if="pledgedProject.status.type === 'FUNDED'")
-					h2 {{ pledgedProject.status.monthsPassed }} months have passed of this project, {{ pledgedProject.status.monthsRemaining }} more to go.
-					h2 Currently {{ pledgedProject.status.weightInFavor }} in favor against {{ pledgedProject.status.weightInFavor }} opposed.
-					p(v-if="pledgedProject.vote !== null") You've cast a vote to {{ pledgedProject.vote ? 'continue' : 'discontinue' }} this project.
-					p(v-else) You haven't cast a vote to discontinue this project.
-
-				template(v-if="pledgedProject.status.type === 'CLOSED' || pledgedProject.status.type === 'FAILED'")
-					p {{ pledgedProject.status.refundedAmount }} was able to be refunded to you.
+			div(v-for="project in account.projectPledges.nodes", :key="project.projectId")
+				p {{ project.title }} ({{ renderStatus(project.status) }})
+				p You pledged {{ project.amount }} {{ project.count > 1 ? `in ${project.pledgeCount} pledges` : '' }}
+				p(v-if="project.vote !== null") You've cast a vote to {{ project.vote ? 'continue' : 'discontinue' }} this project.
+				p(v-else) You haven't cast a vote to discontinue this project.
 
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { navigateTo } from '#imports'
+import { userId } from '@/composables'
 import { renderStatus } from '@/utils'
-import api from '@/utils/api'
+import api, { ProjectStatusEnum } from '@/utils/api'
 
-const promise = computed(async () => {
-	const { account, allProjects, pledgedProjects } = await api.FetchAccount()
-	const grouping = {}
-	for (const project of allProjects) {
-		(grouping[project.status] = grouping[project.status] || []).push(project)
+// type Project = Unpromise<typeof api.FetchYou>['account']['projects']['nodes'][number]
+
+if (userId.value === null) await navigateTo('/')
+
+const promise = computed(() => api.FetchYou({ userId: userId.value! }))
+
+function projectLink(project: { id: number, status: ProjectStatusEnum }): string {
+	switch (project.status) {
+		case ProjectStatusEnum.Draft: return `/draft/${project.id}`
+		case ProjectStatusEnum.Proposal: return `/proposal/${project.id}`
+		default: return `/project/${project.id}`
 	}
-	const {
-		DRAFT: drafts = [],
-		PROPOSAL: proposals = [],
-		CLOSED: closedProjects = [],
-		FUNDED: projects = [],
-		COMPLETE: completeProjects = [],
-		FAILED: failedProjects = [],
-	} = grouping
-	return { account, drafts, proposals, closedProjects, projects, completeProjects, failedProjects, pledgedProjects }
-})
+}
 
 </script>

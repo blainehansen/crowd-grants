@@ -25,36 +25,37 @@ ResultPromise(:promise="projectPromise")
 			input#no_continue(type='radio', :value='false', v-model='project.userPledge.vote')
 			label(for='no_continue') Don't continue
 
-			button(@click="castVote(userId)", :disabled="") Cast vote!
+			button(@click="castVote(userId, project.userPledge.vote)", :disabled="project.userPledge.vote === null") Cast vote!
 			p(v-if="voteFeedback") {{ voteFeedback }}
 
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useRoute, navigateTo } from '#imports'
 import api from '@/utils/api'
-import { userId } from '@composables'
-import { useRoute, navigateTo } from 'nuxt'
+import { handleFeedback } from '@/utils'
+import { userId } from '@/composables'
 const route = useRoute()
 
 // const executeFlag = ref(true)
 const projectPromise = computed(() => {
 	// executeFlag.value
-	return api.FetchProject({ projectId: route.params.id, userId: userId.value })
+	if (!userId.value) return
+	return api.FetchProject({ projectId: route.params.id as string, userId: userId.value })
 })
 
 const voteFeedback = ref(null as string | null)
-async function castVote(userId: string) {
-	const newVote = project.userPledge.vote
-	if (newVote === null) return
+async function castVote(userId: string | null, newVote: boolean | null) {
+	if (userId === null || newVote === null) return
 
 	const succeeded = await handleFeedback(
 		voteFeedback, "loading...", "vote cast!", e => `oh no! ${e}`,
-		api.CastVote(userId, route.params.id, newVote),
+		api.CastVote({ pledgerId: userId, projectId: route.params.id as string, shouldContinue: newVote }),
 	)
 	if (succeeded)
 		// force refresh
-		navigateTo(route.url)
+		navigateTo(route.path)
 		// executeFlag.value = !executeFlag.value
 }
 

@@ -8,7 +8,7 @@ div
 			div(v-for="proposal in proposals", :key="proposal.id")
 				NuxtLink(:to="`/proposal/${proposal.id}`") {{ proposal.title }}
 				NuxtLink(:to="`/person/${proposal.owner.id}`") {{ proposal.owner.name }}
-				p {{ proposal.overallPledgedAmount }} pledged out of {{ proposal.fundingRequirement }}
+				p {{ proposal.totalPledgedAmount }} pledged out of {{ proposal.fundingRequirement }}
 
 </template>
 
