@@ -13,7 +13,7 @@ query FetchPerson($personId: UUID!) {
 }
 
 query FetchYou($userId: UUID!) {
-	account(id: $userId) {
+	you: account(id: $userId) {
 		id
 		name
 		projects: projectsByOwnerId {
@@ -39,7 +39,7 @@ query FetchYou($userId: UUID!) {
 
 
 query FetchDrafts($userId: UUID!) {
-	projects(condition: {ownerId: $userId, status: DRAFT}) {
+	drafts: projects(condition: {ownerId: $userId, status: DRAFT}) {
 		nodes {
 			id
 			title
@@ -48,7 +48,7 @@ query FetchDrafts($userId: UUID!) {
 }
 
 query FetchDraft($draftId: UUID!) {
-	project(id: $draftId) {
+	draft: project(id: $draftId) {
 		id
 		title
 		body
@@ -66,11 +66,11 @@ mutation CreateDraft($input: CreateNewDraftInput!) {
 }
 
 mutation SaveDraft(
-	$projectId: UUID!, $title: String!, $body: String!,
+	$id: UUID!, $title: String!, $body: String!,
 	$initialAmount: BigFloat!, $monthCount: Int!, $monthlyAmount: BigFloat!, $prizeAmount: BigFloat!,
 ) {
 	updateProject(
-		input: {id: $projectId, patch: {
+		input: {id: $id, patch: {
 			title: $title,
 			body: $body,
 			initialAmount: $initialAmount,
@@ -91,7 +91,7 @@ mutation PublishDraft($projectId: UUID!) {
 
 
 query FetchProposals {
-	projects(condition: {status: PROPOSAL}) {
+	proposals: projects(condition: {status: PROPOSAL}) {
 		nodes {
 			id
 			owner {
@@ -107,7 +107,7 @@ query FetchProposals {
 
 
 query FetchProposal($proposalId: UUID!) {
-	project(id: $proposalId) {
+	proposal: project(id: $proposalId) {
 		id
 		owner {
 			id

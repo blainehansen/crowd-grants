@@ -2,7 +2,7 @@ import { GraphQLClient } from 'graphql-request'
 import { getSdk } from './index.generated'
 
 import { Result } from '@blainehansen/monads'
-import { resultPromise } from '@/utils'
+import { resultPromise, resultPromiseDemandKey } from '@/utils'
 
 export * from './index.generated'
 // TODO template host
@@ -12,22 +12,22 @@ const sdk = getSdk(new GraphQLClient('http://localhost:6060/graphql'))
 // const safeSdk = {} as { [K in typeof sdk]: (...args: Parameters<sdk[K]>) => Result<ReturnType<sdk[K]>, Error> }
 // for (const key in sdk) {
 // 	const sdkFunc = sdk[key]
-// 	safeSdk[key] = (...args: any[]) => resultPromise(sdkFunc(...args))
+// 	safeSdk[key] = (...args: any[]) => resultPromiseDemandKey(sdkFunc(...args), '')
 // }
 // export default safeSdk
 
 export default {
 	FetchPerson(...args: Parameters<typeof sdk.FetchPerson>) {
-		return resultPromise(sdk.FetchPerson(...args))
+		return resultPromiseDemandKey(sdk.FetchPerson(...args), 'person')
 	},
 	FetchYou(...args: Parameters<typeof sdk.FetchYou>) {
-		return resultPromise(sdk.FetchYou(...args))
+		return resultPromiseDemandKey(sdk.FetchYou(...args), 'you')
 	},
 	FetchDrafts(...args: Parameters<typeof sdk.FetchDrafts>) {
-		return resultPromise(sdk.FetchDrafts(...args))
+		return resultPromiseDemandKey(sdk.FetchDrafts(...args), 'drafts')
 	},
 	FetchDraft(...args: Parameters<typeof sdk.FetchDraft>) {
-		return resultPromise(sdk.FetchDraft(...args))
+		return resultPromiseDemandKey(sdk.FetchDraft(...args), 'draft')
 	},
 	CreateDraft(...args: Parameters<typeof sdk.CreateDraft>) {
 		return resultPromise(sdk.CreateDraft(...args))
@@ -39,22 +39,22 @@ export default {
 		return resultPromise(sdk.PublishDraft(...args))
 	},
 	FetchProposals(...args: Parameters<typeof sdk.FetchProposals>) {
-		return resultPromise(sdk.FetchProposals(...args))
+		return resultPromiseDemandKey(sdk.FetchProposals(...args), 'proposals')
 	},
 	FetchProposal(...args: Parameters<typeof sdk.FetchProposal>) {
-		return resultPromise(sdk.FetchProposal(...args))
+		return resultPromiseDemandKey(sdk.FetchProposal(...args), 'proposal')
 	},
 	MakePledge(...args: Parameters<typeof sdk.MakePledge>) {
 		return resultPromise(sdk.MakePledge(...args))
 	},
 	FetchProject(...args: Parameters<typeof sdk.FetchProject>) {
-		return resultPromise(sdk.FetchProject(...args))
+		return resultPromiseDemandKey(sdk.FetchProject(...args), 'project')
 	},
 	CastVote(...args: Parameters<typeof sdk.CastVote>) {
 		return resultPromise(sdk.CastVote(...args))
 	},
 	FetchProjects(...args: Parameters<typeof sdk.FetchProjects>) {
-		return resultPromise(sdk.FetchProjects(...args))
+		return resultPromiseDemandKey(sdk.FetchProjects(...args), 'projects')
 	},
 }
 

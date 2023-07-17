@@ -1,5 +1,5 @@
 import { userId } from '@/composables'
-import { defineNuxtRouteMiddleware } from '#imports'
+import { defineNuxtRouteMiddleware, navigateTo } from '#imports'
 
 export default defineNuxtRouteMiddleware((to, from) => {
 	if (userId.value === null && (

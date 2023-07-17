@@ -2,7 +2,7 @@
   "name": "crowd-grants",
   "private": true,
   "scripts": {
-    "build": "nuxt build",
+    "build": "npm run codegen && nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "codegen": "graphql-codegen",

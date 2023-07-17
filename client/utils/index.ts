@@ -9,6 +9,19 @@ export function resultPromise<T>(promise: Promise<T>): Promise<Result<T, Error>>
 	return promise.then(Ok).catch(Err)
 }
 
+function demandKeyOk<T, K extends string>(v: { [k in K]: T }, key: K): Result<NonNullable<T>, Error> {
+	const trueV = v[key]
+	if (trueV === null || trueV === undefined) return Err(new Error(`${key} is null`))
+	return Ok(trueV)
+}
+
+export function resultPromiseDemandKey<T, K extends string>(
+	promise: Promise<{ [k in K]: T }>,
+	key: K,
+): Promise<Result<NonNullable<T>, Error>> {
+	return promise.then(v => demandKeyOk<T, K>(v, key)).catch(Err)
+}
+
 export async function handleFeedback<F, E>(
 	feedback: Ref<F | null>, loading: F, success: F, error: (e: E) => F,
 	actionPromise: Promise<Result<unknown, E>>,

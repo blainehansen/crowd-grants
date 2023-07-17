@@ -12,10 +12,10 @@ ResultPromise(:promise="draftPromise")
 
 		textarea(v-model="draft.body", placeholder="describe your project")
 
-		button(@click="save(draft)", :disabled="!valid") save
+		button(@click="save(draft)", :disabled="!valid(draft)") save
 		p(v-if="saveFeedback") {{ saveFeedback }}
 
-		button(@click="publish(draft)", :disabled="!valid") publish!
+		button(@click="publish(draft)", :disabled="!valid(draft)") publish!
 		p(v-if="publishFeedback") {{ publishFeedback }}
 
 </template>
@@ -28,15 +28,15 @@ import { handleFeedback, Unpromise } from '@/utils'
 import { userId } from '@/composables'
 const route = useRoute()
 
-const draftPromise = computed(() => api.FetchDraft({ draftId: route.params.id, userId: userId.value }))
-type Draft = Unpromise<typeof api.FetchDraft>['project']
+const draftPromise = computed(() => api.FetchDraft({ draftId: route.params.id as string }))
+type Draft = Unpromise<typeof api.FetchDraft>
 
-const valid = computed(() => {
+function valid(draft: Draft) {
 	return draft.initialAmount >= 0
 		&& draft.monthCount >= 0
 		&& draft.monthlyAmount >= 0
 		&& draft.prizeAmount >= 0
-})
+}
 
 const saveFeedback = ref(null as string | null)
 function save(draft: Draft) {
