@@ -42,6 +42,7 @@ const route = useRoute()
 const projectPromise = computed(() => {
 	// executeFlag.value
 	if (!userId.value) return
+	// TODO navigate away if project status no longer matches
 	return api.FetchProject({ projectId: route.params.id as string, userId: userId.value })
 })
 

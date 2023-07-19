@@ -4,8 +4,8 @@ div
 	div(v-if="userId !== null") You are logged in.
 	template(v-else)
 		p Let's unsafely log in!
-		input(v-model="tempUserId", placeholder="00000000-0000-0000-0000-000000000000")
-		button(@click="unsafelyLogIn", :disabled="!tempUserId") log in as this userId
+		div: input(v-model="tempUserId", size="40", placeholder="00000000-0000-0000-0000-000000000000")
+		div: button(@click="unsafelyLogIn", :disabled="!tempUserId") log in as this userId
 
 </template>
 

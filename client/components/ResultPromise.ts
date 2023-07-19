@@ -1,4 +1,4 @@
-import { reactive, watch, defineComponent, h, InternalSlots } from 'vue'
+import { reactive, watch, defineComponent, h, Slots, UnwrapRef } from 'vue'
 import { Result } from '@blainehansen/monads'
 
 // type SlotsType<T, E> = {
@@ -11,7 +11,7 @@ import { Result } from '@blainehansen/monads'
 
 export default defineComponent(
 	// <T, E>(props: { promise: Promise<Result<T, E>> | null, tag: string }, { slots }: { slots: SlotsType<T, E> }) => {
-	<T, E>(props: { promise: Promise<Result<T, E>> | null, tag?: string }, { slots }: { slots: InternalSlots }) => {
+	<T, E>(props: { promise: Promise<Result<T, E>> | null }, { slots }: { slots: Slots }) => {
 		const state = reactive({
 			resolved: false,
 			ok: null as T | null,
@@ -30,15 +30,15 @@ export default defineComponent(
 			}
 			promise.then(result => {
 				result.match({
-					ok: ok => { state.ok = ok },
-					err: err => { state.err = err },
+					ok: ok => { state.ok = ok as UnwrapRef<T> },
+					err: err => { state.err = err as UnwrapRef<E> },
 				})
 				state.resolved = true
 			})
 		}, { immediate: true })
 
 		return () => {
-			const defaultItems = slots.default() || []
+			const defaultItems = (slots.default ? slots.default() : undefined) || []
 			// return h(props.tag, defaultItems.concat(
 			return h('div', defaultItems.concat(
 				slots.combined ? slots.combined({ loading: !state.resolved, ok: state.ok, err: state.err, })

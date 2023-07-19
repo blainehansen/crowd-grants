@@ -5,9 +5,9 @@ div
 		template(#loading): | ...
 		template(#err="err"): h1 Something went wrong! {{ err }}
 		template(#ok="proposals")
-			div(v-for="proposal in proposals", :key="proposal.id")
-				NuxtLink(:to="`/proposal/${proposal.id}`") {{ proposal.title }}
-				NuxtLink(:to="`/person/${proposal.owner.id}`") {{ proposal.owner.name }}
+			div(v-for="proposal in proposals.nodes", :key="proposal.id")
+				div: NuxtLink(:to="`/proposal/${proposal.id}`") {{ proposal.title }}
+				div: NuxtLink(:to="`/person/${proposal.owner.id}`") {{ proposal.owner.name }}
 				p {{ proposal.totalPledgedAmount }} pledged out of {{ proposal.fundingRequirement }}
 
 </template>

@@ -4,27 +4,29 @@ ResultPromise(:promise="draftPromise")
 	template(#loading): | ...
 	template(#err="err"): | {{ err }}
 	template(#ok="draft")
-		input(v-model="draft.title", placeholder="title")
-		input(v-model.number="draft.initialAmount", placeholder="initial funding requirement, for upfront costs")
-		input(v-model.number="draft.monthCount", placeholder="how many months will your project run?")
-		input(v-model.number="draft.monthlyAmount", placeholder="how much per month do you need?")
-		input(v-model.number="draft.prizeAmount", placeholder="prize amount")
+		div: input(v-model="draft.title", placeholder="title")
+		div: input(v-model.number="draft.initialAmount", placeholder="initial funding requirement, for upfront costs")
+		div: input(v-model.number="draft.monthCount", placeholder="how many months will your project run?")
+		div: input(v-model.number="draft.monthlyAmount", placeholder="how much per month do you need?")
+		div: input(v-model.number="draft.prizeAmount", placeholder="prize amount")
 
-		textarea(v-model="draft.body", placeholder="describe your project")
+		div: textarea(v-model="draft.body", placeholder="describe your project")
 
-		button(@click="save(draft)", :disabled="!valid(draft)") save
-		p(v-if="saveFeedback") {{ saveFeedback }}
+		div
+			button(@click="save(draft)", :disabled="!valid(draft)") save
+			p(v-if="saveFeedback") {{ saveFeedback }}
 
-		button(@click="publish(draft)", :disabled="!valid(draft)") publish!
-		p(v-if="publishFeedback") {{ publishFeedback }}
+		div
+			button(@click="publish(draft)", :disabled="!valid(draft)") publish!
+			p(v-if="publishFeedback") {{ publishFeedback }}
 
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, navigateTo } from '#imports'
 import api from '@/utils/api'
-import { handleFeedback, Unpromise } from '@/utils'
+import { handleFeedback, type Unpromise } from '@/utils'
 import { userId } from '@/composables'
 const route = useRoute()
 

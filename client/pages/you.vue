@@ -8,7 +8,7 @@ div
 			h1 {{ account.name }}
 
 			h2 Your projects:
-			NuxtLink(v-for="project in account.projects", :key="project.id", :to="projectLink(project)")
+			NuxtLink(v-for="project in account.projects.nodes", :key="project.id", :to="projectLink(project.id, project.status)")
 				| {{ project.title }} ({{ renderStatus(project.status) }})
 
 			div(v-for="project in account.projectPledges.nodes", :key="project.projectId")
@@ -17,27 +17,17 @@ div
 				p(v-if="project.vote !== null") You've cast a vote to {{ project.vote ? 'continue' : 'discontinue' }} this project.
 				p(v-else) You haven't cast a vote to discontinue this project.
 
+	div: NuxtLink(to="/draft/new") Create a new draft.
+
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { navigateTo } from '#imports'
 import { userId } from '@/composables'
-import { renderStatus } from '@/utils'
+import { renderStatus, projectLink } from '@/utils'
 import api, { ProjectStatusEnum } from '@/utils/api'
 
-// type Project = Unpromise<typeof api.FetchYou>['account']['projects']['nodes'][number]
-
-if (userId.value === null) await navigateTo('/')
-
 const promise = computed(() => api.FetchYou({ userId: userId.value! }))
-
-function projectLink(project: { id: number, status: ProjectStatusEnum }): string {
-	switch (project.status) {
-		case ProjectStatusEnum.Draft: return `/draft/${project.id}`
-		case ProjectStatusEnum.Proposal: return `/proposal/${project.id}`
-		default: return `/project/${project.id}`
-	}
-}
 
 </script>

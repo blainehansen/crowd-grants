@@ -8,7 +8,7 @@ ResultPromise(:promise="personPromise")
 
 		NuxtLink(
 			v-for="project in person.publishedProjects.nodes", :key="project.id",
-			tag="h2", :to="`/project/${project.id}`",
+			tag="h2", :to="projectLink(project.id, project.status)",
 		) {{ project.title }} ({{ renderStatus(project.status) }})
 
 </template>
@@ -17,7 +17,7 @@ ResultPromise(:promise="personPromise")
 import { ref, computed } from 'vue'
 import { useRoute } from '#imports'
 import api from '@/utils/api'
-import { renderStatus } from '@/utils'
+import { renderStatus, projectLink } from '@/utils'
 const route = useRoute()
 
 const personPromise = computed(() => {

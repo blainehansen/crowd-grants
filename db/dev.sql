@@ -121,7 +121,7 @@ create function project_total_pledged_amount(p project) returns numeric as $$
 $$ language sql stable;
 
 create function project_actual_prize_amount(p project) returns numeric as $$
-	select greatest(p.prize_amount, p.project_total_pledged_amount - p.project_base_funding_requirement)
+	select greatest(p.prize_amount, coalesce(p.project_total_pledged_amount, 0) - p.project_base_funding_requirement)
 $$ language sql stable;
 
 
@@ -337,23 +337,28 @@ $$ language sql;
 
 
 
--- -- TESTING
+-- TESTING
 
--- create function u(i text) returns uuid immutable language sql as $$
--- 	select lpad(i, 32, '0')::uuid;
--- $$;
+create function u(i text) returns uuid as $$
+	select lpad(i, 32, '0')::uuid;
+$$ immutable language sql;
 
--- create function r() returns uuid immutable language sql as $$
--- 	select 'ffffffffffffffffffffffffffffffff'::uuid;
--- $$;
+create function r() returns uuid as $$
+	select 'ffffffffffffffffffffffffffffffff'::uuid;
+$$ immutable language sql;
 
--- insert into account (id, "name") values (u('1'), 'leia');
--- insert into account (id, "name") values (u('2'), 'han');
+insert into account (id, "name") values (u('1'), 'luke');
+insert into account (id, "name") values (u('2'), 'leia');
+insert into account (id, "name") values (u('3'), 'han');
+insert into account (id, "name") values (u('4'), 'chewie');
+insert into account (id, "name") values (u('5'), 'obiwan');
+insert into account (id, "name") values (u('6'), 'threepio');
+insert into account (id, "name") values (u('7'), 'artoo');
 
 
 -- -- insert into project (id, owner_id, title, status, months, prize_amount) values (
 -- insert into project (id, owner_id, title, body, status, initial_amount, monthly_amount, month_count, prize_amount) values (
--- 	u('d'), u('1'), 'leia project', '', 'FUNDED',
+-- 	u('d'), u('1'), 'luke project', '', 'FUNDED',
 -- 	1000, 2000, 10, 100
 -- );
 

@@ -1,5 +1,4 @@
-// export type Unpromise<P extends Ref<Promise<any> | null>> = P extends Ref<Promise<infer T> | null> ? T : never
-import { onUnmounted, Ref } from 'vue'
+import { Ref } from 'vue'
 import { Result, Ok, Err } from '@blainehansen/monads'
 
 export type Unpromise<F extends (...args: any[]) => Promise<Result<any, any>>> =
@@ -22,21 +21,19 @@ export function resultPromiseDemandKey<T, K extends string>(
 	return promise.then(v => demandKeyOk<T, K>(v, key)).catch(Err)
 }
 
-export async function handleFeedback<F, E>(
+export async function handleFeedback<F, E, T>(
 	feedback: Ref<F | null>, loading: F, success: F, error: (e: E) => F,
-	actionPromise: Promise<Result<unknown, E>>,
-): Promise<boolean> {
+	actionPromise: Promise<Result<T, E>>,
+): Promise<T | undefined> {
 	feedback.value = loading
 	return actionPromise.then(result => {
 		if (result.isOk()) {
 			feedback.value = success
-			const timeoutId = setTimeout(() => { feedback.value = null }, 2000)
-			onUnmounted(() => clearTimeout(timeoutId))
-			return true
+			return result.value
 		}
 		else {
 			feedback.value = error(result.error)
-			return false
+			return undefined
 		}
 	})
 }
@@ -51,5 +48,13 @@ export function renderStatus(status: ProjectStatusEnum) {
 		case ProjectStatusEnum.Funded: return 'Funded'
 		case ProjectStatusEnum.Complete: return 'Complete'
 		case ProjectStatusEnum.Failed: return 'Failed'
+	}
+}
+
+export function projectLink(id: number, status: ProjectStatusEnum): string {
+	switch (status) {
+		case ProjectStatusEnum.Draft: return `/draft/${id}`
+		case ProjectStatusEnum.Proposal: return `/proposal/${id}`
+		default: return `/project/${id}`
 	}
 }

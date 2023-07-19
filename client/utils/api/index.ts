@@ -23,9 +23,6 @@ export default {
 	FetchYou(...args: Parameters<typeof sdk.FetchYou>) {
 		return resultPromiseDemandKey(sdk.FetchYou(...args), 'you')
 	},
-	FetchDrafts(...args: Parameters<typeof sdk.FetchDrafts>) {
-		return resultPromiseDemandKey(sdk.FetchDrafts(...args), 'drafts')
-	},
 	FetchDraft(...args: Parameters<typeof sdk.FetchDraft>) {
 		return resultPromiseDemandKey(sdk.FetchDraft(...args), 'draft')
 	},

@@ -38,15 +38,6 @@ query FetchYou($userId: UUID!) {
 }
 
 
-query FetchDrafts($userId: UUID!) {
-	drafts: projects(condition: {ownerId: $userId, status: DRAFT}) {
-		nodes {
-			id
-			title
-		}
-	}
-}
-
 query FetchDraft($draftId: UUID!) {
 	draft: project(id: $draftId) {
 		id
