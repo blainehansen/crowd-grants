@@ -46,6 +46,12 @@ create function account_published_projects(a account) returns setof project as $
 	where owner_id = a.id and project.status != 'DRAFT'
 $$ language sql stable;
 
+create function published_projects() returns setof project as $$
+	select project.*
+	from project
+	where project.status in ('PROPOSAL', 'FUNDED')
+$$ language sql stable;
+
 -- create function proposals() returns setof project as $$
 -- 	select project.*
 -- 	from project

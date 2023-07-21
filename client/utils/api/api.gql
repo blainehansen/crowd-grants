@@ -81,59 +81,46 @@ mutation PublishDraft($projectId: UUID!) {
 # }
 
 
-query FetchProposals {
-	proposals: projects(condition: {status: PROPOSAL}) {
-		nodes {
-			id
-			owner {
-				id
-				name
-			}
-			title
-			totalPledgedAmount
-			fundingRequirement
-		}
-	}
-}
-
-
-query FetchProposal($proposalId: UUID!) {
-	proposal: project(id: $proposalId) {
-		id
-		owner {
-			id
-			name
-		}
-		title
-		body
-		initialAmount
-		monthCount
-		monthlyAmount
-		prizeAmount
-		# baseFundingRequirement
-		fundingRequirement
-		totalPledgedAmount
-		totalPledgerCount
-	}
-}
-
-
 mutation MakePledge($pledgerId: UUID!, $projectId: UUID!, $amount: BigFloat!) {
 	makePledge(
 		input: {pledgerId: $pledgerId, projectId: $projectId, amount: $amount}
 	) { _: clientMutationId }
 }
 
+mutation CastVote($pledgerId: UUID!, $projectId: UUID!, $shouldContinue: Boolean!) {
+	castVote(
+		input: {argPledgerId: $pledgerId, argProjectId: $projectId, argShouldContinue: $shouldContinue}
+	) { _: clientMutationId }
+}
+
+query FetchProjects {
+	projects: publishedProjects {
+		nodes {
+			id
+			status
+			owner {
+				id
+				name
+			}
+			title
+			totalPledgedAmount
+			monthsPassed
+			monthCount
+			fundsPaid
+		}
+	}
+}
+
 query FetchProject($projectId: UUID!, $userId: UUID!) {
 	project(id: $projectId) {
 		id
+		status
 		owner {
 			id
 			name
 		}
 		title
 		body
-		status
 		initialAmount
 		monthCount
 		monthlyAmount
@@ -162,30 +149,6 @@ query FetchProject($projectId: UUID!, $userId: UUID!) {
 			vote
 			amount
 			count
-		}
-	}
-}
-
-mutation CastVote($pledgerId: UUID!, $projectId: UUID!, $shouldContinue: Boolean!) {
-	castVote(
-		input: {argPledgerId: $pledgerId, argProjectId: $projectId, argShouldContinue: $shouldContinue}
-	) { _: clientMutationId }
-}
-
-
-query FetchProjects {
-	projects {
-		nodes {
-			id
-			owner {
-				id
-				name
-			}
-			title
-			totalPledgedAmount
-			monthsPassed
-			monthCount
-			fundsPaid
 		}
 	}
 }

@@ -4,6 +4,8 @@ import { Result, Ok, Err } from '@blainehansen/monads'
 export type Unpromise<F extends (...args: any[]) => Promise<Result<any, any>>> =
 	F extends (...args: any[]) => Promise<Result<infer T, any>> ? T : never
 
+export type Nullable<T> = { [K in keyof T]: T[K] | null }
+
 export function resultPromise<T>(promise: Promise<T>): Promise<Result<T, Error>> {
 	return promise.then(Ok).catch(Err)
 }
